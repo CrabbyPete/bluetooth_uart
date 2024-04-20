@@ -1,4 +1,3 @@
-import sys
 import asyncio
 
 from typing    import Iterator
@@ -33,7 +32,7 @@ async def main():
 
     devices = await BleakScanner.discover(timeout=30.0)
     for d in devices:
-        if d.name == 'raspberrypi':
+        if d.name in ('raspberry','rpi-gatt-server'):
             async with BleakClient(d.address, timeout=30.0) as client:
                 await client.start_notify(UART_TX_CHAR_UUID, handle_rx)
                 print("Connected, start typing and press ENTER...")
