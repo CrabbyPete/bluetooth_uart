@@ -11,7 +11,6 @@ try:
   from gi.repository import GObject
 except ImportError:
   import gobject as GObject
-import sys
 
 from random import randint
 
@@ -658,6 +657,7 @@ def main():
                                     error_handler=register_app_error_cb)
 
     mainloop.run()
+
 
 if __name__ == '__main__':
     main()
