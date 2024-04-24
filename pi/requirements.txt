@@ -1,5 +1,0 @@
-dbus-python==1.2.16
-gpiozero==1.6.2
-pyserial==3.5
-RPi.GPIO==0.7.0
-
