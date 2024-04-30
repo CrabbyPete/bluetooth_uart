@@ -44,6 +44,9 @@ async def uart_terminal():
         if UART_SERVICE_UUID.lower() in adv.service_uuids:
             return True
 
+        for address in adv.service_uuids:
+            print(address)
+
         return False
 
     device = await BleakScanner.find_device_by_filter(match_nus_uuid)
@@ -82,7 +85,7 @@ async def uart_terminal():
 
             # some devices, like devices running MicroPython, expect Windows
             # line endings (uncomment line below if needed)
-            # data = data.replace(b"\n", b"\r\n")
+            #data = data.replace(b"\n", b"\r\n")
 
             # Writing without response requires that the data can fit in a
             # single BLE packet. We can use the max_write_without_response_size
@@ -91,12 +94,14 @@ async def uart_terminal():
             for s in sliced(data, rx_char.max_write_without_response_size):
                 await client.write_gatt_char(rx_char, s, response=True)
 
-            print("sent:", data)
+            print("sent:",
+                  data)
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(uart_terminal())
-    except asyncio.CancelledError:
+    except asyncio.CancelledError as e:
         # task is cancelled on disconnect, so we ignore this error
+        print(e)
         pass
