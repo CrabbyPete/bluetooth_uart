@@ -1,3 +1,4 @@
+import zmq
 import time
 import usb.core
 import usb.util
@@ -14,6 +15,17 @@ AOA_ACCESSORY_AUDIO_ADB_PRODUCT_ID  = 0x2D05  # accessory + audio + adb
 
 GOOGLE_VID = 0x18D1
 ACCESSORY_PIDS = {0x2D00, 0x2D01}  # Accessory mode product IDs
+
+context = zmq.Context()
+
+# Client code that connects to the UartServer publisher (receives from the uart)
+in_sock = context.socket(zmq.SUB)
+in_sock.connect("tcp://localhost:5556")
+in_sock.setsockopt_string(zmq.SUBSCRIBE, "")
+
+# Server Code that connects to the UartServers subscriber (sends to the uart)
+out_sock = context.socket(zmq.PUB)
+out_sock.bind("tcp://*:5555")
 
 
 class Android:
@@ -165,7 +177,7 @@ class Android:
         while running:
             try:
                 data = endpoint_in.read(1024, timeout=1000)  # Read up to 1024 bytes with a timeout
-                yield data
+                out_sock.send(data)
 
             except usb.core.USBError as e:
                 if e.errno == 110:
@@ -189,6 +201,7 @@ class Android:
         :return:
         """
         try:
+            data = in_sock.recv()
             endpoint_out.write(data)
             print("Sending data to USB:", data)
         except usb.core.USBError as e:
@@ -217,11 +230,7 @@ def main():
                 endpoint_in, endpoint_out = android.get_bulk_endpoints(accessory, 0)
                 # ADB communication endpoints (if needed)
                 # adb_ep_in, adb_ep_out = get_bulk_endpoints(accessory, 1)
-
             print("Step 2 done")
-
-            if endpoint_in is not None and endpoint_out is not None:
-                pass
 
         except usb.core.USBError as e:
             print("Error setting configuration:", e)

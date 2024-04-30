@@ -6,7 +6,6 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("uart")
 
 
-
 class UartServer:
     """
     Proxy server for the UART.
@@ -22,10 +21,10 @@ class UartServer:
         self.in_skt.connect("tcp://localhost:5555")
         self.in_skt.setsockopt_string(zmq.SUBSCRIBE, "")
 
-
         self.out_skt = ctx.socket(zmq.PUB)
         self.out_skt.bind("tcp://*:5556")
-        self.uart = uart = serial.Serial(port, 9600)
+
+        self.uart = serial.Serial(port, 9600)
 
     def run(self):
         while True:
@@ -41,6 +40,7 @@ class UartServer:
                 data = self.uart.read(self.uart.in_waiting)
                 self.out_skt.send(data)
                 log.info("Sent:{}".format(data))
+
 
 if __name__ == "__main__":
     server = UartServer()

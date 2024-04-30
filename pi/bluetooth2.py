@@ -1,5 +1,3 @@
-
-
 import zmq
 import dbus
 import select
@@ -8,20 +6,20 @@ import dbus.mainloop.glib
 
 from gi.repository import GLib
 
-from advertisement import Advertisement
-from advertisement import register_ad_cb, register_ad_error_cb
-from gatt_server import Service, Characteristic
-from gatt_server import register_app_cb, register_app_error_cb
+from advertisement  import Advertisement
+from advertisement  import register_ad_cb, register_ad_error_cb
+from gatt_server    import Service, Characteristic
+from gatt_server    import register_app_cb, register_app_error_cb
 
-BLUEZ_SERVICE_NAME = 'org.bluez'
-DBUS_OM_IFACE = 'org.freedesktop.DBus.ObjectManager'
-LE_ADVERTISING_MANAGER_IFACE = 'org.bluez.LEAdvertisingManager1'
-GATT_MANAGER_IFACE = 'org.bluez.GattManager1'
-GATT_CHRC_IFACE = 'org.bluez.GattCharacteristic1'
-UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
-UART_RX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
-UART_TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
-LOCAL_NAME = 'rpi-gatt-server'
+BLUEZ_SERVICE_NAME              = 'org.bluez'
+DBUS_OM_IFACE                   = 'org.freedesktop.DBus.ObjectManager'
+LE_ADVERTISING_MANAGER_IFACE    = 'org.bluez.LEAdvertisingManager1'
+GATT_MANAGER_IFACE              = 'org.bluez.GattManager1'
+GATT_CHRC_IFACE                 = 'org.bluez.GattCharacteristic1'
+UART_SERVICE_UUID               = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+UART_RX_CHARACTERISTIC_UUID     = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'
+UART_TX_CHARACTERISTIC_UUID     = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'
+LOCAL_NAME                      = 'rpi-gatt-server'
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -31,12 +29,13 @@ mainloop = None
 
 context = zmq.Context()
 
-# Client code that connects to the UartServer publisher
+# Client code that connects to the UartServer publisher (receives from the uart)
 in_sock = context.socket(zmq.SUB)
 in_sock.connect("tcp://localhost:5556")
 in_sock.setsockopt_string(zmq.SUBSCRIBE, "")
 
-# Sever Code that connects to the UartServers subscriber
+
+# Server Code that connects to the UartServers subscriber (sends to the uart)
 out_sock = context.socket(zmq.PUB)
 out_sock.bind("tcp://*:5555")
 
@@ -48,11 +47,9 @@ class TxCharacteristic(Characteristic):
                                 ['notify'], service)
         self.notifying = False
 
-        GLib.io_add_watch(in_sock.FD, GLib.IO_IN, self.read_from_uart_helper)
+        GLib.io_add_watch(in_sock, GLib.IO_IN, self.read_from_uart_helper)
 
     def send_tx(self, chars):
-        import pdb; pdb.set_trace()
-
         if not self.notifying:
             return
 
@@ -63,14 +60,16 @@ class TxCharacteristic(Characteristic):
         self.PropertiesChanged(GATT_CHRC_IFACE, {'Value': value}, [])
 
     def read_from_uart_helper(self, fd, condition):
-        try:
-            data = in_sock.recv(flags=zmq.NOBLOCK)
-        except Exception as e:
-            log.error("Error receiving data".format(e))
-        else:
-            log.info("Data:{}".format(data))
-            if data:
-                self.send_tx(data)
+        while in_sock.getsockopt(zmq.EVENTS):
+            try:
+                data = in_sock.recv(flags=zmq.NOBLOCK)      # Don't block or it can hold up all the code
+            except Exception as e:
+                log.error("Error receiving data".format(e))
+            else:
+                log.info("Data:{}".format(data))
+                if data:
+                    self.send_tx(data)
+
         return True
 
     def StartNotify(self):
@@ -184,3 +183,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
